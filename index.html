@@ -1,19 +1,56 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>AfriPiPay</title>
+  <title>AfriPiPay Test Payment</title>
 </head>
 <body>
+  <h1>AfriPiPay Developer App</h1>
+  <button id="payButton">Pay with Pi</button>
 
-    <h1>AfriPiPay</h1>
+  <script>
+    // This function triggers a Pi payment request
+    async function payWithPi() {
+      try {
+        // Example payment request
+        const payment = {
+          amount: 0.0001, // Test Pi amount
+          memo: "Test payment from AfriPiPay Developer app",
+          metadata: { purpose: "Step 10 checklist" }
+        };
 
-    <p>Welcome to AfriPiPay.</p>
+        // Call Pi Network SDK (available inside Pi Browser)
+        const result = await window.Pi.createPayment(payment, {
+          onReadyForServerApproval: async (paymentId) => {
+            // Send paymentId to your backend for approval
+            await fetch("/payment-callback", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ paymentId })
+            });
+          },
+          onReadyForServerCompletion: async (paymentId, txid) => {
+            // Notify backend of completion
+            await fetch("/payment-callback", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ paymentId, txid })
+            });
+          },
+          onCancel: (paymentId) => {
+            console.log("Payment cancelled:", paymentId);
+          },
+          onError: (error, paymentId) => {
+            console.error("Payment error:", error, paymentId);
+          }
+        });
 
-    <p>Pi SDK frontend is under construction.</p>
+        console.log("Payment result:", result);
+      } catch (err) {
+        console.error("Payment failed:", err);
+      }
+    }
 
-    <button id="loginBtn">Login with Pi</button>
-
-    <button id="payBtn">Pay with Pi</button>
-
+    document.getElementById("payButton").addEventListener("click", payWithPi);
+  </script>
 </body>
 </html>
