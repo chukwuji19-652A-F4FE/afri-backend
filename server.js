@@ -4,19 +4,19 @@ const path = require("path");
 
 const PORT = process.env.PORT || 3000;
 
-// ✅ Explicit route for validation file
+// Validation file
 app.get('/validation-key.txt', (req, res) => {
   res.sendFile(path.join(__dirname, 'validation-key.txt'));
 });
 
-// AfriPiPay payment callback endpoint
+// Payment callback endpoint
 app.get('/payment-callback', (req, res) => {
   res.send('Payment callback received!');
 });
 
-// Health check endpoint
+// Serve frontend
 app.get('/', (req, res) => {
-  res.send('AfriPiPay backend is running!');
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 app.listen(PORT, () => {
