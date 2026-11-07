@@ -1,56 +1,119 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>AfriPiPay Test Payment</title>
-</head>
-<body>
-  <h1>AfriPiPay Developer App</h1>
-  <button id="payButton">Pay with Pi</button>
+  <title>AfriPiPay Developer App</title>
+
+  <script src="https://sdk.minepi.com/pi-sdk.js"></script>
 
   <script>
-    // This function triggers a Pi payment request
-    async function payWithPi() {
+    Pi.init({
+      version: "2.0"
+    });
+
+    let currentUser = null;
+
+    async function loginWithPi() {
       try {
-        // Example payment request
-        const payment = {
-          amount: 0.0001, // Test Pi amount
-          memo: "Test payment from AfriPiPay Developer app",
-          metadata: { purpose: "Step 10 checklist" }
-        };
+        const scopes = ["payments"];
 
-        // Call Pi Network SDK (available inside Pi Browser)
-        const result = await window.Pi.createPayment(payment, {
-          onReadyForServerApproval: async (paymentId) => {
-            // Send paymentId to your backend for approval
-            await fetch("/payment-callback", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ paymentId })
-            });
-          },
-          onReadyForServerCompletion: async (paymentId, txid) => {
-            // Notify backend of completion
-            await fetch("/payment-callback", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ paymentId, txid })
-            });
-          },
-          onCancel: (paymentId) => {
-            console.log("Payment cancelled:", paymentId);
-          },
-          onError: (error, paymentId) => {
-            console.error("Payment error:", error, paymentId);
+        const auth = await Pi.authenticate(
+          scopes,
+          function(payment) {
+            console.log("Incomplete payment found:", payment);
           }
-        });
+        );
 
-        console.log("Payment result:", result);
+        currentUser = auth.user;
+
+        document.getElementById("status").innerText =
+          "Logged in as " + currentUser.username;
+
       } catch (err) {
-        console.error("Payment failed:", err);
+        console.error(err);
+        alert("Pi login failed");
       }
     }
 
-    document.getElementById("payButton").addEventListener("click", payWithPi);
+    async function payWithPi() {
+      try {
+
+        if (!window.Pi) {
+          alert("Pi SDK not available.");
+          return;
+        }
+
+        const paymentData = {
+          amount: 0.0001,
+          memo: "AfriPiPay test payment",
+          metadata: {
+            app: "AfriPiPay"
+          }
+        };
+
+        const callbacks = {
+
+          onReadyForServerApproval: async function(paymentId) {
+
+            await fetch("/payment-callback", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({
+                action: "approve",
+                paymentId
+              })
+            });
+
+          },
+
+          onReadyForServerCompletion: async function(paymentId, txid) {
+
+            await fetch("/payment-callback", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({
+                action: "complete",
+                paymentId,
+                txid
+              })
+            });
+
+          },
+
+          onCancel: function(paymentId) {
+            console.log("Cancelled:", paymentId);
+          },
+
+          onError: function(error) {
+            console.error(error);
+          }
+        };
+
+        await Pi.createPayment(paymentData, callbacks);
+
+      } catch (err) {
+        console.error(err);
+      }
+    }
   </script>
+</head>
+
+<body>
+
+  <h1>AfriPiPay Developer App</h1>
+
+  <p id="status">Not logged in</p>
+
+  <button onclick="loginWithPi()">
+    Login with Pi
+  </button>
+
+  <button onclick="payWithPi()">
+    Pay with Pi
+  </button>
+
 </body>
 </html>
